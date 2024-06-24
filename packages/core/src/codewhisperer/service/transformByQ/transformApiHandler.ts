@@ -853,7 +853,6 @@ export async function downloadResultArchive(
     pathToArchive: string,
     downloadArtifactType: TransformationDownloadArtifactType
 ) {
-    let downloadErrorMessage = undefined
     const cwStreamingClient = await createCodeWhispererChatStreamingClient()
 
     try {
@@ -862,16 +861,19 @@ export async function downloadResultArchive(
             {
                 exportId: jobId,
                 exportIntent: ExportIntent.TRANSFORMATION,
+                ...(downloadArtifactId !== undefined && {
+                    exportContext: { transformationExportContext: { downloadArtifactId, downloadArtifactType } },
+                }),
             },
             pathToArchive
         )
     } catch (e: any) {
-        downloadErrorMessage = (e as Error).message
+        const downloadErrorMessage = (e as Error).message
         getLogger().error(`CodeTransformation: ExportResultArchive error = ${downloadErrorMessage}`)
         telemetry.codeTransform_logApiError.emit({
             codeTransformApiNames: 'ExportResultArchive',
             codeTransformSessionId: CodeTransformTelemetryState.instance.getSessionId(),
-            codeTransformJobId: transformByQState.getJobId(),
+            codeTransformJobId: jobId,
             codeTransformApiErrorMessage: downloadErrorMessage,
             codeTransformRequestId: e.requestId ?? '',
             result: MetadataResult.Fail,
